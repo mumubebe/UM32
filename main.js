@@ -8,13 +8,13 @@ const rl = readline.createInterface({
     output: process.stdout
 })
 
-let codex = loadCodex();
+let codex = loadCodex(process.argv[2]);
 
 let machine = new Machine(codex);
 
 //machine.run()
-var args = process.argv.slice(2)[0];
-if (args == 'debug'){
+
+if (process.argv[3] == 'debug'){
     rl.on('line', ()=>{
         machine.cycle()
         machine.debug()
@@ -25,10 +25,17 @@ if (args == 'debug'){
 
 
 
-function loadCodex() {
-    const program = readFileSync('codex.umz')
+function loadCodex(file) {
+    const program = readFileSync(file)
     const dv = new DataView(program.buffer);
     return dv
 }
 
+
+process.on('SIGINT', function() {
+    console.log("Caught interrupt signal");
+
+    if (i_should_exit)
+        process.exit();
+});
 

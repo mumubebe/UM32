@@ -3,7 +3,7 @@ import readlineSync from 'readline-sync'
 
 class InputLoad {
     constructor(input) {
-        this.input = input
+        this.input = input + "\n"
         this.count = 0;
     }
     isFinished() {
@@ -25,6 +25,7 @@ export class Machine {
         this.count = 0
         this.finger = 0;
         this.arrays = []
+        this.allocFreeIndex = [];
 
         this.arrays.push(codex)
 
@@ -105,20 +106,33 @@ export class Machine {
                 throw new Error('HALT');
         
             case 8:
-                this.arrays.push(this.createPlatter(
-                    this.getRegister(C)
-                ))
-            
-                this.setRegister(B, this.arrays.length - 1)
+                if (this.allocFreeIndex.length > 0) {
+                    let index = this.allocFreeIndex.pop();
+                    this.arrays[index] = this.createPlatter(
+                        this.getRegister(C)
+                    )
+                    this.setRegister(B, index);
+                } else {
+                    this.arrays.push(this.createPlatter(
+                        this.getRegister(C)
+                    ))
+                    this.setRegister(B, this.arrays.length - 1);
+                }
                 break;
 
             case 9:
                 if (this.getRegister(C) == 0) break;
                 this.arrays[this.getRegister(C)] = []
+                // Keep track of free spots
+                this.allocFreeIndex.push(this.getRegister(C))
                 break;
             
             case 10:
-                process.stdout.write(String.fromCharCode(this.getRegister(C)));
+                let c = this.getRegister(C)
+                if (c >= 0 && c <=255) {
+                    process.stdout.write(new Uint8Array([c]));
+                }
+                
                 break;
             case 11:
                 if (this.inputLoad?.isFinished() || !this.inputLoad) {
@@ -177,10 +191,6 @@ export class Machine {
         return this.arrays[arrayIndex].getUint32(finger)
     }
 
-    setValue(ui32, v) {
-        return ui32.setUint32(0, v)
-    }
-
     getRegister(n) {
         return this.registers[n].getUint32(0)
     }
@@ -198,7 +208,7 @@ export class Machine {
 
     debug() {
         console.log("Finger; ",this.finger / 4)
-        console.log("Current: ", this.currentPlatter)
+        console.log("Current: ", this.currentPlatter.toString(16))
         const instruction = this.getInstruction(this.currentPlatter)
         if (instruction > 13) {
             console.log(instruction)
@@ -218,7 +228,7 @@ export class Machine {
         for (const [key, value] of Object.entries(this.registers)) {
             console.log(`R${key} : ${this.getRegister(key)}`);
         }
-        
+   
         console.log("*************************************")
         
     }
